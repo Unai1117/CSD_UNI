@@ -2,58 +2,57 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.*;
 
 public class Terrain3 implements Terrain {
-    Viewer v; 
-    Lock l; 
+    Viewer v;
+    Lock l;
     Condition[][] cond;
 
-    public Terrain3 (int t, int ants, int movs, String msg){
-        v = new Viewer(t, ants, movs, msg); 
+    public Terrain3(int t, int ants, int move, String msg) {
+        v = new Viewer(t, ants, move, msg);
         l = new ReentrantLock();
         cond = new Condition[t][t];
-        for(int i = 0; i < t; i++){
-            for(int j = 0; j < t; j++){
+        for (int i = 0; i < t; i++) {
+            for (int j = 0; j < t; j++) {
                 cond[i][j] = l.newCondition();
             }
         }
     }
 
-    public void hi (int a){
+    public void hi(int a) {
         l.lock();
-        try{
+        try {
             v.hi(a);
-        } finally{
+        } finally {
             l.unlock();
         }
     }
 
-    public void bye (int a){
+    public void bye(int a) {
         Pos p = v.getPos(a);
         l.lock();
-        try{
-            bye(a);
+        try {
+            v.bye(a);
             cond[p.x][p.y].signalAll();
         } finally {
             l.unlock();
         }
     }
 
-    public void move (int a) throws InterruptedException {
+    public void move(int a) throws InterruptedException {
         Pos p = v.getPos(a);
         l.lock();
-        try{
+        try {
             v.turn(a);
             Pos des = v.dest(a);
             while (v.occupied(des)) {
-                if(cond[des.x][des.y].await(300, TimeUnit.MILLISECONDS)){
-                    v.retry(a);
-                } else {
+                if (!cond[des.x][des.y].await(300, TimeUnit.MILLISECONDS)) {
                     v.chgDir(a);
                     des = v.dest(a);
-                    v.retry(a);
                 }
             }
             v.go(a);
             cond[p.x][p.y].signalAll();
-        } finally {l.unlock();}
+        } finally {
+            l.unlock();
+        }
     }
 }
